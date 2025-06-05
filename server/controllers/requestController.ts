@@ -29,9 +29,24 @@ export const createRequest = async (req: Request, res: Response) => {
 export const getRequests = async (req: Request, res: Response) => {
   const { priority } = req.query;
   const filter = priority ? { priority } : {};
-  const requests = await MaintenanceRequest.find(filter);
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+  const requests = await MaintenanceRequest.find(filter).lean();
+
+  requests.sort((a, b) => {
+    const pa = priorityOrder[a.priority as string] ?? 3;
+    const pb = priorityOrder[b.priority as string] ?? 3;
+    if (pa !== pb) return pa - pb;
+
+    const ta = new Date(a.timestamp).getTime();
+    const tb = new Date(b.timestamp).getTime();
+    return tb - ta; // nowsze wyżej
+  });
+
   res.json({ requests });
 };
+
+
 
 export const markResolved = async (req: Request, res: Response) => {
   const { id } = req.params;
